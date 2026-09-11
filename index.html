@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>トークテーマくじ｜動物好きのカフェ会</title>
+<style>
+:root{
+  --bg-deep:#1C3A30;
+  --bg-grad:#24473C;
+  --card:#FFFBF2;
+  --card-edge:#E8DFCC;
+  --ink:#24473C;
+  --ink-sub:#6B7A70;
+  --accent:#E0737F;
+  --accent-deep:#C9515F;
+  --leaf:#4F8A6D;
+  --honey:#F2C14E;
+  --font:'Hiragino Maru Gothic ProN','Zen Maru Gothic','Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;}
+body{
+  font-family:var(--font);
+  background:linear-gradient(170deg,var(--bg-grad) 0%,var(--bg-deep) 60%);
+  color:var(--card);
+  user-select:none;
+  touch-action:manipulation;
+  overflow:hidden;
+}
+#app{
+  height:100dvh;min-height:100vh;
+  display:flex;flex-direction:column;
+  max-width:560px;margin:0 auto;position:relative;
+}
+/* 背景の足あと */
+.pawtrail{position:absolute;inset:0;pointer-events:none;opacity:.07;overflow:hidden;}
+.pawtrail svg{position:absolute;width:54px;height:54px;color:var(--card);}
+.pawtrail svg:nth-child(1){top:14%;left:-4%;transform:rotate(24deg);}
+.pawtrail svg:nth-child(2){top:32%;left:14%;transform:rotate(18deg);}
+.pawtrail svg:nth-child(3){top:52%;right:10%;transform:rotate(-14deg);}
+.pawtrail svg:nth-child(4){top:72%;right:-4%;transform:rotate(-22deg);}
+
+/* ヘッダー */
+header{
+  height:56px;flex:0 0 auto;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 18px;z-index:2;
+}
+.title{font-size:13px;font-weight:700;letter-spacing:.08em;opacity:.9;}
+.remain{font-size:12px;color:var(--card);opacity:.75;font-variant-numeric:tabular-nums;text-align:right;}
+.bar{width:88px;height:4px;border-radius:2px;background:rgba(255,251,242,.18);margin-top:5px;overflow:hidden;}
+.bar i{display:block;height:100%;background:var(--honey);width:100%;transition:width .5s cubic-bezier(.2,.8,.2,1);}
+
+/* カード領域 */
+.stage{flex:1 1 auto;display:flex;align-items:center;justify-content:center;padding:6px 18px 0;perspective:1400px;z-index:2;}
+.card{
+  width:100%;height:100%;max-height:460px;
+  position:relative;transform-style:preserve-3d;
+  transition:transform .42s cubic-bezier(.2,.8,.2,1);
+  cursor:pointer;
+}
+.card.flip{transform:rotateY(180deg);}
+.face{
+  position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  background:var(--card);border-radius:22px;
+  box-shadow:0 14px 34px rgba(0,0,0,.28);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:26px 22px;overflow:hidden;
+}
+.face::after{content:"";position:absolute;inset:9px;border:1px solid var(--card-edge);border-radius:15px;pointer-events:none;}
+.back{color:var(--leaf);}
+.back .bigpaw{width:104px;height:104px;opacity:.18;}
+.back p{margin-top:20px;color:var(--ink-sub);font-size:14px;letter-spacing:.1em;}
+.front{transform:rotateY(180deg);justify-content:space-between;}
+
+.pill{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--accent);color:#fff;
+  padding:6px 14px;border-radius:999px;
+  font-size:11px;font-weight:700;letter-spacing:.12em;
+  flex:0 0 auto;
+}
+.pill svg{width:12px;height:12px;}
+.themewrap{flex:1 1 auto;display:flex;align-items:center;justify-content:center;width:100%;}
+.theme{
+  color:var(--ink);font-weight:700;text-align:center;
+  font-size:clamp(26px,6.5vw,42px);line-height:1.6;letter-spacing:.02em;
+  word-break:auto-phrase;
+  opacity:0;transform:translateY(20px);
+}
+.theme.in{animation:rise .26s cubic-bezier(.2,.8,.2,1) forwards;}
+@keyframes rise{to{opacity:1;transform:translateY(0);}}
+.theme.s1{font-size:clamp(23px,5.7vw,37px);}
+.theme.s2{font-size:clamp(20px,5vw,32px);}
+body.big .theme{font-size:clamp(31px,7.8vw,50px);}
+body.big .theme.s1{font-size:clamp(27px,6.8vw,44px);}
+body.big .theme.s2{font-size:clamp(24px,6vw,38px);}
+.meta{flex:0 0 auto;display:flex;align-items:center;gap:10px;color:var(--ink-sub);font-size:12px;font-variant-numeric:tabular-nums;}
+.meta .dia{width:7px;height:7px;background:var(--leaf);transform:rotate(45deg);opacity:.5;}
+.cornerpaw{position:absolute;top:20px;left:20px;width:24px;height:24px;color:var(--leaf);opacity:.25;}
+
+/* 抽選アニメーション */
+.back .idle{display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.back.busy .idle{display:none;}
+.drawing{display:none;position:absolute;inset:0;align-items:center;justify-content:center;}
+.back.busy .drawing{display:flex;}
+.steps{position:absolute;inset:0;pointer-events:none;}
+.steps svg{position:absolute;width:36px;height:36px;color:var(--leaf);opacity:0;}
+.steps svg.on{animation:step .52s cubic-bezier(.2,.8,.2,1) forwards;}
+@keyframes step{
+  0%{opacity:0;transform:translate(-50%,-50%) rotate(var(--r)) scale(.5);}
+  55%{opacity:.9;transform:translate(-50%,-50%) rotate(var(--r)) scale(1.14);}
+  100%{opacity:.5;transform:translate(-50%,-50%) rotate(var(--r)) scale(1);}
+}
+.roul{text-align:center;position:relative;z-index:1;width:100%;padding:0 6px;}
+.roul .q{
+  display:flex;align-items:center;justify-content:center;
+  height:4.6em;overflow:hidden;
+  font-size:clamp(17px,4.4vw,24px);font-weight:700;line-height:1.55;
+  color:var(--ink);opacity:.42;letter-spacing:.01em;
+  transition:opacity .18s;
+  word-break:auto-phrase;
+}
+.roul .q.lock{opacity:.95;}
+.roul .lb{font-size:12.5px;color:var(--ink-sub);letter-spacing:.14em;margin-top:12px;}
+.roul .lb i{display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--leaf);
+  margin:0 2px 2px;opacity:.35;animation:blink 1.1s infinite;}
+.roul .lb i:nth-child(2){animation-delay:.18s;}
+.roul .lb i:nth-child(3){animation-delay:.36s;}
+@keyframes blink{0%,100%{opacity:.25;}50%{opacity:.9;}}
+.card.shrink{transform:scale(.975);}
+.card.shrink.flip{transform:rotateY(180deg) scale(.975);}
+
+/* 操作部 */
+.controls{flex:0 0 auto;padding:16px 18px 10px;z-index:2;}
+.draw{
+  width:82%;max-width:380px;height:64px;margin:0 auto;display:block;
+  background:var(--accent);color:#fff;border:none;border-radius:16px;
+  font-family:var(--font);font-size:19px;font-weight:700;letter-spacing:.06em;
+  box-shadow:0 8px 20px rgba(224,115,127,.3);
+  transition:transform .12s,background .12s;
+}
+.draw:active{transform:scale(.97);background:var(--accent-deep);}
+.draw:disabled{opacity:.5;}
+.subs{display:flex;justify-content:center;gap:10px;margin-top:12px;}
+.sub{
+  background:none;border:none;color:var(--card);opacity:.72;
+  font-family:var(--font);font-size:13.5px;padding:12px 16px;min-height:44px;
+}
+.sub:active{opacity:1;}
+.sub[disabled]{opacity:.28;}
+
+footer{flex:0 0 auto;height:40px;display:flex;align-items:center;justify-content:center;z-index:2;}
+.hostzone{font-size:11px;color:var(--card);opacity:.35;letter-spacing:.08em;padding:8px 26px;}
+
+/* モーダル */
+.sheet{
+  position:fixed;inset:0;background:rgba(12,26,22,.72);
+  display:none;align-items:flex-end;justify-content:center;z-index:10;
+}
+.sheet.on{display:flex;}
+.panel{
+  width:100%;max-width:560px;max-height:84dvh;overflow-y:auto;
+  background:var(--card);color:var(--ink);
+  border-radius:22px 22px 0 0;padding:22px 20px 30px;
+  animation:up .24s cubic-bezier(.2,.8,.2,1);
+}
+@keyframes up{from{transform:translateY(28px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.panel h2{font-size:16px;margin-bottom:4px;}
+.panel .lead{font-size:12px;color:var(--ink-sub);margin-bottom:16px;line-height:1.7;}
+.sec{margin-bottom:20px;}
+.sec h3{font-size:12px;color:var(--leaf);letter-spacing:.1em;margin-bottom:9px;}
+.chips{display:flex;flex-wrap:wrap;gap:7px;}
+.chip{
+  border:1.5px solid var(--card-edge);background:#fff;color:var(--ink);
+  font-family:var(--font);font-size:12.5px;padding:9px 13px;border-radius:999px;min-height:40px;
+}
+.chip.on{background:var(--leaf);border-color:var(--leaf);color:#fff;}
+.row{display:flex;gap:8px;align-items:center;}
+.row input{
+  flex:1;border:1.5px solid var(--card-edge);border-radius:10px;
+  padding:11px 12px;font-family:var(--font);font-size:15px;color:var(--ink);min-width:0;
+}
+.mini{background:var(--ink);color:#fff;border:none;border-radius:10px;padding:0 16px;height:44px;font-family:var(--font);font-size:13px;}
+.mini.warn{background:var(--accent-deep);}
+.toggle{display:flex;justify-content:space-between;align-items:center;padding:11px 0;font-size:14px;}
+.sw{width:50px;height:29px;border-radius:999px;background:var(--card-edge);position:relative;transition:background .2s;border:none;}
+.sw i{position:absolute;top:3px;left:3px;width:23px;height:23px;border-radius:50%;background:#fff;transition:left .2s;}
+.sw.on{background:var(--leaf);}
+.sw.on i{left:24px;}
+.hist{list-style:none;}
+.hist li{padding:11px 4px;border-bottom:1px solid var(--card-edge);font-size:14px;line-height:1.5;display:flex;gap:10px;}
+.hist li span{color:var(--ink-sub);font-size:12px;flex:0 0 46px;font-variant-numeric:tabular-nums;padding-top:2px;}
+.hist li:active{background:#F6F1E4;}
+.empty{color:var(--ink-sub);font-size:13px;padding:14px 0;}
+.close{width:100%;height:50px;border:none;border-radius:14px;background:var(--ink);color:#fff;font-family:var(--font);font-size:15px;margin-top:6px;}
+.note{background:#F4F8F2;border:1px dashed var(--leaf);border-radius:12px;padding:12px 14px;font-size:12.5px;line-height:1.75;color:var(--ink);}
+
+/* 終了 */
+.done{text-align:center;color:var(--ink);}
+.done .bigpaw{width:70px;height:70px;color:var(--leaf);opacity:.3;margin-bottom:14px;}
+.done h3{font-size:21px;margin-bottom:8px;}
+.done p{font-size:14px;color:var(--ink-sub);line-height:1.8;}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.08s !important;transition-duration:.08s !important;}
+  .card.flip{transform:none;}
+  .card.flip .back{display:none;}
+  .card.flip .front{transform:none;}
+}
+@media (max-height:620px){
+  .theme{font-size:clamp(22px,5.6vw,32px);}
+  .draw{height:56px;font-size:17px;}
+  .stage{padding-top:2px;}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="pawtrail" id="trail"></div>
+
+  <header>
+    <div class="title">動物好きのカフェ会</div>
+    <div>
+      <div class="remain"><span id="remain">100</span> ／ 100</div>
+      <div class="bar"><i id="bar"></i></div>
+    </div>
+  </header>
+
+  <div class="stage">
+    <div class="card" id="card">
+      <div class="face back" id="back">
+        <div class="idle">
+          <svg class="bigpaw" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <ellipse cx="20" cy="26" rx="9" ry="7.5"/><ellipse cx="10" cy="15" rx="3.4" ry="4.4"/>
+            <ellipse cx="17" cy="11" rx="3.4" ry="4.6"/><ellipse cx="24" cy="11" rx="3.4" ry="4.6"/>
+            <ellipse cx="31" cy="15" rx="3.4" ry="4.4"/>
+          </svg>
+          <p>タップして引く</p>
+        </div>
+        <div class="drawing">
+          <div class="steps" id="steps"></div>
+          <div class="roul">
+            <div class="q" id="roulQ"></div>
+            <div class="lb">テーマを選んでいます<i></i><i></i><i></i></div>
+          </div>
+        </div>
+      </div>
+      <div class="face front" id="front">
+        <svg class="cornerpaw" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <ellipse cx="20" cy="26" rx="9" ry="7.5"/><ellipse cx="10" cy="15" rx="3.4" ry="4.4"/>
+          <ellipse cx="17" cy="11" rx="3.4" ry="4.6"/><ellipse cx="24" cy="11" rx="3.4" ry="4.6"/>
+          <ellipse cx="31" cy="15" rx="3.4" ry="4.4"/>
+        </svg>
+        <div class="pill" id="pill"></div>
+        <div class="themewrap"><div class="theme" id="theme"></div></div>
+        <div class="meta"><span id="num"></span><i class="dia"></i><span id="tier"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="draw" id="draw">くじを引く</button>
+    <div class="subs">
+      <button class="sub" id="pass" disabled>この話題はパス</button>
+      <button class="sub" id="histBtn">これまでのテーマ</button>
+    </div>
+  </div>
+
+  <footer><div class="hostzone" id="hostzone">主催者メニューは長押し</div></footer>
+</div>
+
+<!-- 履歴 -->
+<div class="sheet" id="histSheet">
+  <div class="panel">
+    <h2>これまでのテーマ</h2>
+    <p class="lead">タップすると、そのテーマをもう一度表示します。</p>
+    <ul class="hist" id="histList"></ul>
+    <button class="close" data-close>閉じる</button>
+  </div>
+</div>
+
+<!-- 主催者メニュー -->
+<div class="sheet" id="hostSheet">
+  <div class="panel">
+    <h2>主催者メニュー</h2>
+    <p class="lead">参加者には見せずに操作してください。</p>
+
+    <div class="sec">
+      <h3>参加者への案内</h3>
+      <div class="note">飼っていない方は「実家の子」「友達の家の子」「憧れの動物」に置き換えて答えてください。<br>答えにくいテーマは遠慮なくパスして構いません。</div>
+    </div>
+
+    <div class="sec">
+      <h3>カテゴリ絞り込み</h3>
+      <div class="chips" id="catChips"></div>
+      <p class="lead" style="margin:9px 0 0">すべて未選択のときは、序盤ほど易しいテーマが出る自動制御で進みます。</p>
+    </div>
+
+    <div class="sec">
+      <h3>番号を指定して呼び出す</h3>
+      <div class="row">
+        <input type="number" id="numInput" min="1" max="100" placeholder="1〜100">
+        <button class="mini" id="numGo">表示</button>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h3>演出の長さ</h3>
+      <div class="chips" id="speedChips">
+        <button class="chip" data-s="fast">短め 1.5秒</button>
+        <button class="chip on" data-s="std">標準 3.8秒</button>
+        <button class="chip" data-s="slow">じっくり 5.0秒</button>
+      </div>
+      <p class="lead" style="margin:9px 0 0">演出の途中でカードをタップすると、すぐに結果を表示できます。</p>
+    </div>
+
+    <div class="sec">
+      <h3>表示</h3>
+      <div class="toggle"><span>文字を大きく表示</span><button class="sw" id="swBig"><i></i></button></div>
+    </div>
+
+    <div class="sec">
+      <h3>セッション</h3>
+      <div class="row"><button class="mini warn" id="reset" style="flex:1">最初からやり直す</button></div>
+    </div>
+
+    <button class="close" data-close>閉じる</button>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   トークテーマ 100問
+   cat: A=ウォームアップ / B=うちの子 / C=あるある / D=偏愛
+        E=もしも / F=つながる
+   tier: 1=誰でも即答 2=経験談 3=想像・偏愛（終盤向け）
+   ※文言はここだけ書き換えれば差し替えできます
+   ========================================================= */
+const THEMES=[
+{n:1,c:"A",t:1,q:"いま、いちばん好きな動物は？"},
+{n:2,c:"A",t:1,q:"犬派、猫派、それとも第三の道？"},
+{n:3,c:"A",t:1,q:"子どものころ、最初に好きになった動物は？"},
+{n:4,c:"A",t:1,q:"実家や近所にいた動物を教えてください"},
+{n:5,c:"A",t:1,q:"動物園で必ず立ち止まるコーナーは？"},
+{n:6,c:"A",t:1,q:"水族館でいちばん長く見ていられる生き物は？"},
+{n:7,c:"A",t:1,q:"スマホの写真、動物が占める割合はどれくらい？"},
+{n:8,c:"A",t:1,q:"待ち受け画面は誰ですか？"},
+{n:9,c:"A",t:1,q:"もふもふ派？ つるつる派？"},
+{n:10,c:"A",t:1,q:"動物の鳴き声で、いちばん好きな音は？"},
+{n:11,c:"A",t:1,q:"一度は触ってみたい動物は？"},
+{n:12,c:"A",t:1,q:"動物のどのパーツがいちばん好き？"},
+{n:13,c:"A",t:1,q:"動物がきっかけでできた友達はいますか？"},
+{n:14,c:"A",t:1,q:"動物の番組やドキュメンタリー、見ますか？"},
+{n:15,c:"A",t:1,q:"名前をつけるのは得意なほうですか？"},
+{n:16,c:"A",t:1,q:"家にある動物モチーフのもの、いくつありますか？"},
+{n:17,c:"A",t:1,q:"今日ここへ来る途中、動物を見かけましたか？"},
+{n:18,c:"A",t:1,q:"好きだけれど、飼うのは難しいと思う動物は？"},
+{n:19,c:"A",t:1,q:"動物の写真を撮るとき、こだわっていることは？"},
+{n:20,c:"A",t:1,q:"動物に関することで、人に驚かれた経験は？"},
+
+{n:21,c:"B",t:1,q:"うちの子の名前と、その由来を教えてください"},
+{n:22,c:"B",t:2,q:"出会ったきっかけは？"},
+{n:23,c:"B",t:2,q:"初めて家に来た日のことを覚えていますか？"},
+{n:24,c:"B",t:1,q:"うちの子のいちばん得意なことは？"},
+{n:25,c:"B",t:2,q:"いちばん苦手にしているものは？"},
+{n:26,c:"B",t:1,q:"寝るときの定位置はどこですか？"},
+{n:27,c:"B",t:2,q:"うちの子の変わったクセを1つ"},
+{n:28,c:"B",t:1,q:"いちばんよく撮る角度やポーズは？"},
+{n:29,c:"B",t:2,q:"呼ぶときの名前、何パターンありますか？"},
+{n:30,c:"B",t:2,q:"うちの子に言われていそうな文句は？"},
+{n:31,c:"B",t:2,q:"この子に似ている有名人やキャラクターは？"},
+{n:32,c:"B",t:2,q:"ごはんのこだわりはありますか？"},
+{n:33,c:"B",t:1,q:"家族の中で、いちばん懐かれているのは誰？"},
+{n:34,c:"B",t:2,q:"一緒に行った、いちばん遠い場所は？"},
+{n:35,c:"B",t:2,q:"買ったのに使ってくれなかったものは？"},
+{n:36,c:"B",t:2,q:"想像以上に気に入ってくれたものは？"},
+{n:37,c:"B",t:2,q:"「おもしろ写真」を1枚選ぶなら、どれ？"},
+{n:38,c:"B",t:1,q:"留守番のあと、どんな顔で迎えてくれますか？"},
+{n:39,c:"B",t:2,q:"1つだけ言葉を教えられるなら、何を教える？"},
+{n:40,c:"B",t:2,q:"この子と暮らして、自分が変わったところは？"},
+
+{n:41,c:"C",t:2,q:"動物のせいで諦めたことはありますか？"},
+{n:42,c:"C",t:2,q:"家具や服が犠牲になった事件を1つ"},
+{n:43,c:"C",t:1,q:"深夜の大運動会、何時ごろ始まりますか？"},
+{n:44,c:"C",t:2,q:"動物のために買った、いちばん大きなものは？"},
+{n:45,c:"C",t:2,q:"自分より動物のほうがいいものを使っている、と思うものは？"},
+{n:46,c:"C",t:2,q:"「他人にはわからないだろうな」という一枚は？"},
+{n:47,c:"C",t:1,q:"動物の前でだけ出る声、再現できますか？"},
+{n:48,c:"C",t:2,q:"住まい探しで苦労した話はありますか？"},
+{n:49,c:"C",t:2,q:"掃除のルーティンはどう変わりましたか？"},
+{n:50,c:"C",t:1,q:"動物のために早起きするようになりましたか？"},
+{n:51,c:"C",t:1,q:"家の主導権、握っているのはどちら？"},
+{n:52,c:"C",t:2,q:"出かける前に必ずする儀式はありますか？"},
+{n:53,c:"C",t:2,q:"旅行のときはどうしていますか？"},
+{n:54,c:"C",t:2,q:"家に来た友達の反応で、忘れられないものは？"},
+{n:55,c:"C",t:2,q:"動物のせいで遅刻した経験はありますか？"},
+{n:56,c:"C",t:1,q:"抜け毛との戦い、勝っていますか？"},
+{n:57,c:"C",t:2,q:"「うちの子だけかも」と思う行動は？"},
+{n:58,c:"C",t:1,q:"撮影しようとすると必ず起きることは？"},
+{n:59,c:"C",t:2,q:"動物と映っているときの自分の顔、どうなっていますか？"},
+{n:60,c:"C",t:2,q:"自慢したいけれど機会がなかった話を1つ"},
+
+{n:61,c:"D",t:1,q:"好きな動物系の映画やドラマは？"},
+{n:62,c:"D",t:1,q:"心に残っている動物の本や漫画は？"},
+{n:63,c:"D",t:1,q:"フォローしている動物アカウントはありますか？"},
+{n:64,c:"D",t:1,q:"動物のキャラクターで、いちばん好きなのは？"},
+{n:65,c:"D",t:2,q:"最近買った動物モチーフのものは？"},
+{n:66,c:"D",t:1,q:"好きな動物園・水族館を教えてください"},
+{n:67,c:"D",t:2,q:"飼育員さんの解説で驚いた話はありますか？"},
+{n:68,c:"D",t:2,q:"動物の雑学を1つ披露するなら？"},
+{n:69,c:"D",t:3,q:"マニアックだと言われる動物の知識は？"},
+{n:70,c:"D",t:2,q:"動物を撮るのに使っている道具はありますか？"},
+{n:71,c:"D",t:3,q:"いちばん動物に近づけた体験は？"},
+{n:72,c:"D",t:2,q:"ふれあい施設や猫カフェの思い出は？"},
+{n:73,c:"D",t:2,q:"旅先で出会った動物の話は？"},
+{n:74,c:"D",t:2,q:"野生動物を見た経験で、印象的なものは？"},
+{n:75,c:"D",t:2,q:"鳥・魚・虫、実は詳しいジャンルはありますか？"},
+{n:76,c:"D",t:2,q:"爬虫類や両生類について、どう思いますか？"},
+{n:77,c:"D",t:2,q:"動物の名前の由来で、おもしろいと思ったものは？"},
+{n:78,c:"D",t:1,q:"動物が出てくることわざで、好きなものは？"},
+{n:79,c:"D",t:2,q:"自分の干支の動物、似ていると思いますか？"},
+{n:80,c:"D",t:2,q:"動物の絵、描けますか？"},
+
+{n:81,c:"E",t:3,q:"動物と1日だけ会話できたら、何を聞きますか？"},
+{n:82,c:"E",t:3,q:"1日だけ動物になれるなら、何になりますか？"},
+{n:83,c:"E",t:3,q:"場所とお金が無限なら、何と暮らしたいですか？"},
+{n:84,c:"E",t:3,q:"動物の通訳になれたら、どんな仕事をしたい？"},
+{n:85,c:"E",t:1,q:"自分を動物に例えるなら、何ですか？"},
+{n:86,c:"E",t:1,q:"周りからは、何の動物っぽいと言われますか？"},
+{n:87,c:"E",t:3,q:"動物園を1日貸し切れたら、何をしますか？"},
+{n:88,c:"E",t:3,q:"動物と暮らす理想の家は、どんな家？"},
+{n:89,c:"E",t:3,q:"生まれ変わるなら、どんな家の子になりたい？"},
+{n:90,c:"E",t:3,q:"動物のための新商品を考えるなら、何をつくる？"},
+{n:91,c:"E",t:3,q:"動物と行ってみたい旅先はどこですか？"},
+{n:92,c:"E",t:3,q:"うちの子に職業を与えるなら、何が向いている？"},
+{n:93,c:"E",t:3,q:"動物の運動会があったら、どの種目に出しますか？"},
+{n:94,c:"E",t:3,q:"動物だけの街があるとしたら、どんな街？"},
+{n:95,c:"E",t:3,q:"動物と一緒に出られる番組があるなら、何に出たい？"},
+
+{n:96,c:"F",t:3,q:"関西で、動物に会えるおすすめの場所は？"},
+{n:97,c:"F",t:3,q:"一緒に行ってみたい動物スポットはありますか？"},
+{n:98,c:"F",t:3,q:"今日の中で、趣味が近そうだと感じた人は？"},
+{n:99,c:"F",t:3,q:"今日聞いた話で、いちばん驚いたのは？"},
+{n:100,c:"F",t:3,q:"次に集まるなら、どこへ行きたいですか？"}
+];
+
+const CATS={
+  A:{label:"ウォームアップ",icon:'<path d="M4 9h11v5a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V9z"/><path d="M15 10h2a2.5 2.5 0 0 1 0 5h-2"/><path d="M7 5V3M11 5V3"/>'},
+  B:{label:"うちの子",icon:'<path d="M4 10.5 12 4l8 6.5"/><path d="M6.5 9.5V19h11V9.5"/>'},
+  C:{label:"あるある",icon:'<circle cx="12" cy="12" r="8"/><path d="M6 9c4 1 8 3 11 6M5 14c4-3 8-5 12-6"/>'},
+  D:{label:"偏愛",icon:'<path d="M5 5h6a2 2 0 0 1 2 2v12a2 2 0 0 0-2-2H5z"/><path d="M19 5h-6a2 2 0 0 0-2 2v12a2 2 0 0 1 2-2h6z"/>'},
+  E:{label:"もしも",icon:'<path d="M7 17h9a4 4 0 0 0 0-8 5.5 5.5 0 0 0-10.4 1.6A3.2 3.2 0 0 0 7 17z"/>'},
+  F:{label:"つながる",icon:'<path d="M12 21s6-5.4 6-10a6 6 0 1 0-12 0c0 4.6 6 10 6 10z"/><circle cx="12" cy="11" r="2.2"/>'}
+};
+const PAW='<svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><ellipse cx="20" cy="26" rx="9" ry="7.5"/><ellipse cx="10" cy="15" rx="3.4" ry="4.4"/><ellipse cx="17" cy="11" rx="3.4" ry="4.6"/><ellipse cx="24" cy="11" rx="3.4" ry="4.6"/><ellipse cx="31" cy="15" rx="3.4" ry="4.4"/></svg>';
+
+/* ---------- 状態（すべてメモリ上。ストレージは使用しない） ---------- */
+let bag=[], history=[], drawCount=0, current=null, animating=false, filter=new Set(), big=false;
+
+const $=id=>document.getElementById(id);
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
+
+function init(){
+  if(typeof clearTimers==='function'){clearTimers();endDraw=null;}
+  animating=false;
+  const bk=$('back'); if(bk){bk.classList.remove('busy');$('steps').innerHTML='';}
+  $('card').classList.remove('shrink');
+  bag=shuffle(THEMES.map(t=>t.n));
+  history=[];drawCount=0;current=null;
+  $('card').classList.remove('flip');
+  $('draw').textContent='くじを引く';
+  $('draw').disabled=false;
+  $('pass').disabled=true;
+  updateRemain();
+}
+function updateRemain(){
+  $('remain').textContent=bag.length;
+  $('bar').style.width=(bag.length/THEMES.length*100)+'%';
+}
+function allowedTiers(){
+  if(filter.size>0) return [1,2,3];
+  if(drawCount<3) return [1];
+  if(drawCount<8) return [1,2];
+  return [1,2,3];
+}
+function pick(){
+  const tiers=allowedTiers();
+  const ok=n=>{const t=THEMES[n-1];
+    if(filter.size>0 && !filter.has(t.c)) return false;
+    return tiers.includes(t.t);};
+  let idx=bag.findIndex(ok);
+  if(idx<0) idx=bag.findIndex(n=>filter.size===0||filter.has(THEMES[n-1].c));
+  if(idx<0) idx=0;
+  return bag.splice(idx,1)[0];
+}
+function render(n,record=true){
+  const t=THEMES[n-1];
+  current=n;
+  const cat=CATS[t.c];
+  $('pill').innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+cat.icon+'</svg>'+cat.label;
+  const el=$('theme');
+  el.className='theme'+(t.q.length>45?' s2':t.q.length>30?' s1':'');
+  el.textContent=t.q;
+  $('num').textContent='No.'+String(t.n).padStart(3,'0');
+  $('tier').textContent=t.t===1?'ウォームアップ':t.t===2?'エピソード':'じっくり';
+  void el.offsetWidth; el.classList.add('in');
+  if(record) history.push(n);
+  $('pass').disabled=false;
+  updateRemain();
+}
+function finish(){
+  $('front').innerHTML='<div class="done">'+PAW.replace('<svg','<svg class="bigpaw"')+
+    '<h3>100のテーマ、すべて引き切りました</h3><p>おつかれさまでした。<br>主催者メニューから、最初にもどせます。</p></div>';
+  $('front').querySelector('.bigpaw').style.color='var(--leaf)';
+  $('draw').disabled=true;$('pass').disabled=true;
+  $('card').classList.add('flip');
+}
+/* ---------- 抽選アニメーション（3〜5秒） ---------- */
+const SPEEDS={slow:5000,std:3800,fast:1500};
+let drawMs=SPEEDS.std, timers=[], endDraw=null;
+const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const later=(fn,ms)=>timers.push(setTimeout(fn,ms));
+const clearTimers=()=>{timers.forEach(clearTimeout);timers=[];};
+
+// 足あとの通り道（%指定・左下から右上へ）
+const TRACK=[[14,82,18],[27,69,10],[41,58,16],[57,44,8],[72,31,14],[86,18,6]];
+
+function playDraw(n){
+  const T=reduce?400:drawMs;
+  const back=$('back'), steps=$('steps'), roul=$('roulQ');
+  back.classList.add('busy');
+  $('card').classList.add('shrink');
+  steps.innerHTML='';
+  roul.classList.remove('lock');
+  roul.textContent=THEMES[n-1].q;
+
+  if(!reduce){
+    // 足あとを1歩ずつ。全体の18%〜78%の区間で歩き切る
+    const start=T*0.18, span=T*0.60;
+    TRACK.forEach((p,i)=>{
+      const el=document.createElement('div');
+      el.innerHTML=PAW;
+      const svg=el.firstChild;
+      svg.style.left=p[0]+'%';svg.style.top=p[1]+'%';
+      svg.style.setProperty('--r',p[2]+'deg');
+      svg.style.transform='translate(-50%,-50%) rotate('+p[2]+'deg) scale(.5)';
+      steps.appendChild(svg);
+      later(()=>svg.classList.add('on'), start+span/TRACK.length*i);
+    });
+    // テーマ本文が次々に切り替わる。はじめは速く、終盤にかけて減速
+    const pool=THEMES.filter(t=>t.n!==n);
+    let last=-1;
+    const t0=Date.now();
+    const spin=()=>{
+      const p=(Date.now()-t0)/(T*0.86);
+      if(p>=1){roul.textContent=THEMES[n-1].q;roul.classList.add('lock');return;}
+      let i;do{i=Math.floor(Math.random()*pool.length);}while(i===last&&pool.length>1);
+      last=i;
+      roul.textContent=pool[i].q;
+      later(spin, 70+Math.pow(p,3)*460);
+    };
+    spin();
+  }
+
+  endDraw=()=>{
+    endDraw=null;clearTimers();
+    roul.textContent=THEMES[n-1].q;
+    roul.classList.add('lock');
+    $('card').classList.remove('shrink');
+    render(n);drawCount++;
+    $('card').classList.add('flip');
+    setTimeout(()=>{
+      back.classList.remove('busy');
+      animating=false;$('draw').disabled=false;$('draw').textContent='次のテーマへ';
+    },440);
+  };
+  later(()=>{if(endDraw)endDraw();}, T);
+}
+
+function drawTheme(){
+  if(animating) return;
+  if(bag.length===0){finish();return;}
+  animating=true;$('draw').disabled=true;$('pass').disabled=true;
+  const n=pick();
+  const flipped=$('card').classList.contains('flip');
+  if(flipped){$('card').classList.remove('flip');later(()=>playDraw(n),300);}
+  else{playDraw(n);}
+}
+$('draw').addEventListener('click',drawTheme);
+$('card').addEventListener('click',()=>{
+  if(endDraw){endDraw();return;}            // 演出中のタップで即表示
+  if(!animating && !$('card').classList.contains('flip')) drawTheme();
+});
+$('pass').addEventListener('click',()=>{
+  if(current==null||animating)return;
+  bag.push(current);            // 捨てずに末尾へ戻す
+  history.pop();
+  drawCount=Math.max(0,drawCount-1);
+  drawTheme();
+});
+
+/* ---------- 履歴 ---------- */
+$('histBtn').addEventListener('click',()=>{
+  const ul=$('histList');
+  if(history.length===0){ul.innerHTML='<li class="empty">まだテーマを引いていません。</li>';}
+  else{ul.innerHTML=history.map((n,i)=>{const t=THEMES[n-1];
+    return '<li data-n="'+n+'"><span>'+String(i+1)+'問目</span>'+t.q+'</li>';}).reverse().join('');}
+  ul.querySelectorAll('li[data-n]').forEach(li=>li.addEventListener('click',()=>{
+    render(+li.dataset.n,false);$('card').classList.add('flip');closeSheets();}));
+  $('histSheet').classList.add('on');
+});
+
+/* ---------- 主催者メニュー（2秒長押し） ---------- */
+let holdTimer=null;
+const hz=$('hostzone');
+const startHold=e=>{holdTimer=setTimeout(()=>{openHost();},2000);};
+const endHold=()=>{clearTimeout(holdTimer);};
+['mousedown','touchstart'].forEach(ev=>hz.addEventListener(ev,startHold,{passive:true}));
+['mouseup','mouseleave','touchend','touchcancel','touchmove'].forEach(ev=>hz.addEventListener(ev,endHold,{passive:true}));
+
+function openHost(){
+  const box=$('catChips');
+  box.innerHTML=Object.entries(CATS).map(([k,v])=>
+    '<button class="chip'+(filter.has(k)?' on':'')+'" data-c="'+k+'">'+v.label+'</button>').join('');
+  box.querySelectorAll('.chip').forEach(b=>b.addEventListener('click',()=>{
+    const c=b.dataset.c;
+    filter.has(c)?filter.delete(c):filter.add(c);
+    b.classList.toggle('on');
+  }));
+  $('hostSheet').classList.add('on');
+}
+$('numGo').addEventListener('click',()=>{
+  const v=parseInt($('numInput').value,10);
+  if(!(v>=1&&v<=100))return;
+  const i=bag.indexOf(v); if(i>=0)bag.splice(i,1);
+  render(v);$('card').classList.add('flip');
+  $('draw').textContent='次のテーマへ';$('draw').disabled=false;
+  $('numInput').value='';closeSheets();
+});
+$('speedChips').querySelectorAll('.chip').forEach(b=>b.addEventListener('click',()=>{
+  drawMs=SPEEDS[b.dataset.s];
+  $('speedChips').querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+}));
+$('swBig').addEventListener('click',()=>{
+  big=!big;document.body.classList.toggle('big',big);$('swBig').classList.toggle('on',big);
+});
+$('reset').addEventListener('click',()=>{
+  $('front').innerHTML=frontHTML;
+  init();closeSheets();
+});
+const frontHTML=$('front').innerHTML;
+
+function closeSheets(){document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('on'));}
+document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',closeSheets));
+document.querySelectorAll('.sheet').forEach(s=>s.addEventListener('click',e=>{if(e.target===s)closeSheets();}));
+
+/* ---------- 背景の足あと ---------- */
+$('trail').innerHTML=PAW.repeat(4);
+
+init();
+</script>
+</body>
+</html>
