@@ -223,7 +223,7 @@ footer{flex:0 0 auto;height:40px;display:flex;align-items:center;justify-content
   <header>
     <div class="title">動物好きのカフェ会</div>
     <div>
-      <div class="remain"><span id="remain">100</span> ／ 100</div>
+      <div class="remain"><span id="remain">100</span> ／ <span id="total">100</span></div>
       <div class="bar"><i id="bar"></i></div>
     </div>
   </header>
@@ -289,7 +289,9 @@ footer{flex:0 0 auto;height:40px;display:flex;align-items:center;justify-content
 
     <div class="sec">
       <h3>参加者への案内</h3>
-      <div class="note">テーマは「いま一緒に暮らしている子」が前提です。飼っていない方は「実家の子」「友達の家の子」「これから迎えたい子」に置き換えて答えてください。<br>お別れした子の話も歓迎ですが、答えにくいテーマは遠慮なくパスして構いません。</div>
+      <div class="note">多くのテーマは「いま一緒に暮らしている子」が前提です。飼っていない方は「実家の子」「友達の家の子」「これから迎えたい子」に置き換えて答えてください。<br>お別れした子の話も歓迎ですが、答えにくいテーマは遠慮なくパスして構いません。</div>
+      <div class="toggle"><span>飼っていない方に配慮する</span><button class="sw" id="swAnyone"><i></i></button></div>
+      <p class="lead" style="margin:0">オンのあいだは、いま動物と暮らしていなくても答えられる<span id="anyCount"></span>問だけを出します。置き換えの案内は不要になります。</p>
     </div>
 
     <div class="sec">
@@ -301,7 +303,7 @@ footer{flex:0 0 auto;height:40px;display:flex;align-items:center;justify-content
     <div class="sec">
       <h3>番号を指定して呼び出す</h3>
       <div class="row">
-        <input type="number" id="numInput" min="1" max="100" placeholder="1〜100">
+        <input type="number" id="numInput" min="1">
         <button class="mini" id="numGo">表示</button>
       </div>
     </div>
@@ -332,29 +334,33 @@ footer{flex:0 0 auto;height:40px;display:flex;align-items:center;justify-content
 
 <script>
 /* =========================================================
-   トークテーマ 100問
+   トークテーマ 120問
    ペットの話が中心。B・C・D の68問が「うちの子」まわりで、
    A で入口をつくり、E・F で締める構成。
    cat: A=ウォームアップ(14) / B=うちの子(28) / C=あるある(24)
         D=世話と暮らし(16) / E=もしも(12) / F=つながる(6)
+        G=だれでも(20)
+   a:1 いま動物と暮らしていなくても答えられるテーマ（34問）。
+       主催者メニューの「飼っていない方に配慮」をオンにすると、
+       これだけを出す
    tier: 1=誰でも即答 2=経験談 3=想像・偏愛（終盤向け）
    ※文言はここだけ書き換えれば差し替えできます
    ========================================================= */
 const THEMES=[
 {n:1,c:"A",t:1,q:"いま、一緒に暮らしている動物を教えてください"},
-{n:2,c:"A",t:1,q:"犬派、猫派、それとも第三の道？"},
-{n:3,c:"A",t:1,q:"子どものころ、家にいた動物は？"},
+{n:2,c:"A",t:1,a:1,q:"犬派、猫派、それとも第三の道？"},
+{n:3,c:"A",t:1,a:1,q:"子どものころ、家にいた動物は？"},
 {n:4,c:"A",t:1,q:"スマホの写真、うちの子が占める割合はどれくらい？"},
-{n:5,c:"A",t:1,q:"待ち受け画面は誰ですか？"},
+{n:5,c:"A",t:1,a:1,q:"待ち受け画面は誰ですか？"},
 {n:6,c:"A",t:1,q:"うちの子を一言で表すと？"},
-{n:7,c:"A",t:1,q:"もふもふ派？ つるつる派？"},
+{n:7,c:"A",t:1,a:1,q:"もふもふ派？ つるつる派？"},
 {n:8,c:"A",t:1,q:"うちの子の鳴き声、再現できますか？"},
 {n:9,c:"A",t:1,q:"今日、家を出るとき、うちの子はどうしていましたか？"},
-{n:10,c:"A",t:1,q:"家にある動物モチーフのもの、いくつありますか？"},
+{n:10,c:"A",t:1,a:1,q:"家にある動物モチーフのもの、いくつありますか？"},
 {n:11,c:"A",t:1,q:"うちの子の写真、いま1枚見せるならどれ？"},
-{n:12,c:"A",t:1,q:"動物がきっかけでできた友達はいますか？"},
-{n:13,c:"A",t:1,q:"好きだけれど、飼うのは難しいと思う動物は？"},
-{n:14,c:"A",t:1,q:"ペットの話で、人に驚かれた経験は？"},
+{n:12,c:"A",t:1,a:1,q:"動物がきっかけでできた友達はいますか？"},
+{n:13,c:"A",t:1,a:1,q:"好きだけれど、飼うのは難しいと思う動物は？"},
+{n:14,c:"A",t:1,a:1,q:"動物の話で、人に驚かれた経験は？"},
 
 {n:15,c:"B",t:1,q:"うちの子の名前と、その由来を教えてください"},
 {n:16,c:"B",t:2,q:"出会ったきっかけは？"},
@@ -429,7 +435,7 @@ const THEMES=[
 
 {n:83,c:"E",t:3,q:"うちの子と1日だけ会話できたら、何を聞きますか？"},
 {n:84,c:"E",t:3,q:"1日だけ入れ替われるなら、何をしてみたいですか？"},
-{n:85,c:"E",t:1,q:"自分を動物に例えるなら、何ですか？"},
+{n:85,c:"E",t:1,a:1,q:"自分を動物に例えるなら、何ですか？"},
 {n:86,c:"E",t:1,q:"うちの子は、人間だったらどんな性格だと思いますか？"},
 {n:87,c:"E",t:3,q:"場所とお金が無限なら、どんな暮らしをさせたいですか？"},
 {n:88,c:"E",t:3,q:"うちの子に職業を与えるなら、何が向いていますか？"},
@@ -440,12 +446,33 @@ const THEMES=[
 {n:93,c:"E",t:3,q:"一日だけ人間になってもらえたら、どこへ行きますか？"},
 {n:94,c:"E",t:3,q:"生まれ変わっても、また同じ子と暮らしたいですか？"},
 
-{n:95,c:"F",t:3,q:"関西で、動物と一緒に行けるおすすめの場所は？"},
-{n:96,c:"F",t:3,q:"一緒に行ってみたいペットスポットはありますか？"},
-{n:97,c:"F",t:3,q:"今日の中で、暮らし方が近そうだと感じた人は？"},
-{n:98,c:"F",t:3,q:"今日聞いた話で、いちばん驚いたのは？"},
+{n:95,c:"F",t:3,a:1,q:"関西で、動物に会えるおすすめの場所は？"},
+{n:96,c:"F",t:3,a:1,q:"みんなで行ってみたい、動物に会える場所は？"},
+{n:97,c:"F",t:3,a:1,q:"今日の中で、話が合いそうだと感じた人は？"},
+{n:98,c:"F",t:3,a:1,q:"今日聞いた話で、いちばん驚いたのは？"},
 {n:99,c:"F",t:3,q:"帰ったら、うちの子に何と報告しますか？"},
-{n:100,c:"F",t:3,q:"次に集まるなら、どこへ行きたいですか？"}
+{n:100,c:"F",t:3,a:1,q:"次に集まるなら、どこへ行きたいですか？"},
+
+{n:101,c:"G",t:1,a:1,q:"これまでに出会った中で、いちばん記憶に残っている動物は？"},
+{n:102,c:"G",t:1,a:1,q:"子どものころ、飼ってみたかった動物は？"},
+{n:103,c:"G",t:2,a:1,q:"友達や家族の家で、仲よくなった動物はいますか？"},
+{n:104,c:"G",t:1,a:1,q:"いつか一緒に暮らしてみたい動物は？"},
+{n:105,c:"G",t:2,a:1,q:"その動物と暮らすなら、どんな名前をつけますか？"},
+{n:106,c:"G",t:1,a:1,q:"動物園や水族館で、必ず立ち止まるのはどこですか？"},
+{n:107,c:"G",t:1,a:1,q:"動物の動画、どんなものをよく見ますか？"},
+{n:108,c:"G",t:1,a:1,q:"フォローしている動物アカウントはありますか？"},
+{n:109,c:"G",t:1,a:1,q:"好きな動物のキャラクターは？"},
+{n:110,c:"G",t:2,a:1,q:"心に残っている動物の映画・本・漫画は？"},
+{n:111,c:"G",t:1,a:1,q:"街で見かける動物で、つい目で追ってしまうのは？"},
+{n:112,c:"G",t:2,a:1,q:"動物に癒やされた瞬間を1つ"},
+{n:113,c:"G",t:1,a:1,q:"動物のしぐさで、いちばん好きなものは？"},
+{n:114,c:"G",t:1,a:1,q:"動物の鳴き声で、好きな音は？"},
+{n:115,c:"G",t:1,a:1,q:"一度は触れてみたい動物は？"},
+{n:116,c:"G",t:2,a:1,q:"動物の雑学を1つ披露するなら？"},
+{n:117,c:"G",t:3,a:1,q:"動物と関わる仕事に就くなら、何がいいですか？"},
+{n:118,c:"G",t:2,a:1,q:"自分の干支の動物、似ていると思いますか？"},
+{n:119,c:"G",t:3,a:1,q:"動物と暮らすために、いまから準備できることは？"},
+{n:120,c:"G",t:3,a:1,q:"動物好きの人と話していて、うれしくなる瞬間は？"}
 ];
 
 const CATS={
@@ -454,12 +481,15 @@ const CATS={
   C:{label:"あるある",icon:'<circle cx="12" cy="12" r="8"/><path d="M6 9c4 1 8 3 11 6M5 14c4-3 8-5 12-6"/>'},
   D:{label:"世話と暮らし",icon:'<path d="M12 20.4S4.6 15.5 4.6 10.4A4.4 4.4 0 0 1 12 7.2a4.4 4.4 0 0 1 7.4 3.2c0 5.1-7.4 10-7.4 10z"/>'},
   E:{label:"もしも",icon:'<path d="M7 17h9a4 4 0 0 0 0-8 5.5 5.5 0 0 0-10.4 1.6A3.2 3.2 0 0 0 7 17z"/>'},
-  F:{label:"つながる",icon:'<path d="M12 21s6-5.4 6-10a6 6 0 1 0-12 0c0 4.6 6 10 6 10z"/><circle cx="12" cy="11" r="2.2"/>'}
+  F:{label:"つながる",icon:'<path d="M12 21s6-5.4 6-10a6 6 0 1 0-12 0c0 4.6 6 10 6 10z"/><circle cx="12" cy="11" r="2.2"/>'},
+  G:{label:"だれでも",icon:'<circle cx="9.5" cy="8.5" r="3"/><path d="M4 19a5.5 5.5 0 0 1 11 0"/><path d="M16 6.2a3 3 0 0 1 0 5.6"/><path d="M17.6 13.6A5 5 0 0 1 20.5 18"/>'}
 };
 const PAW='<svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><ellipse cx="20" cy="26" rx="9" ry="7.5"/><ellipse cx="10" cy="15" rx="3.4" ry="4.4"/><ellipse cx="17" cy="11" rx="3.4" ry="4.6"/><ellipse cx="24" cy="11" rx="3.4" ry="4.6"/><ellipse cx="31" cy="15" rx="3.4" ry="4.4"/></svg>';
 
 /* ---------- 状態（すべてメモリ上。ストレージは使用しない） ---------- */
 let bag=[], history=[], drawCount=0, current=null, animating=false, filter=new Set(), big=false;
+// 「飼っていない方に配慮」。オンのあいだは a:1 のテーマだけを出す
+let anyoneOnly=false;
 
 const $=id=>document.getElementById(id);
 const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
@@ -487,14 +517,15 @@ function allowedTiers(){
   if(drawCount<8) return [1,2];
   return [1,2,3];
 }
+function inScope(n){const t=THEMES[n-1];
+  if(anyoneOnly && !t.a) return false;
+  return filter.size===0 || filter.has(t.c);}
 function pick(){
   const tiers=allowedTiers();
-  const ok=n=>{const t=THEMES[n-1];
-    if(filter.size>0 && !filter.has(t.c)) return false;
-    return tiers.includes(t.t);};
-  let idx=bag.findIndex(ok);
-  if(idx<0) idx=bag.findIndex(n=>filter.size===0||filter.has(THEMES[n-1].c));
-  if(idx<0) idx=0;
+  let idx=bag.findIndex(n=>inScope(n)&&tiers.includes(THEMES[n-1].t));
+  if(idx<0) idx=bag.findIndex(inScope);                       // 難易度の条件を外す
+  if(idx<0) idx=bag.findIndex(n=>!anyoneOnly||THEMES[n-1].a); // カテゴリ絞り込みも外す
+  if(idx<0) return null;                                      // 配慮モードで出せる札が尽きた
   return bag.splice(idx,1)[0];
 }
 function render(n,record=true){
@@ -506,7 +537,7 @@ function render(n,record=true){
   el.className='theme'+(t.q.length>45?' s2':t.q.length>30?' s1':'');
   el.textContent=t.q;
   $('num').textContent='No.'+String(t.n).padStart(3,'0');
-  $('tier').textContent=t.t===1?'ウォームアップ':t.t===2?'エピソード':'じっくり';
+  $('tier').textContent=t.t===1?'ひとこと':t.t===2?'エピソード':'じっくり';
   void el.offsetWidth; el.classList.add('in');
   if(record) history.push(n);
   $('pass').disabled=false;
@@ -514,11 +545,25 @@ function render(n,record=true){
 }
 function finish(){
   $('front').innerHTML='<div class="done">'+PAW.replace('<svg','<svg class="bigpaw"')+
-    '<h3>100のテーマ、すべて引き切りました</h3><p>おつかれさまでした。<br>主催者メニューから、最初にもどせます。</p></div>';
+    '<h3>'+THEMES.length+'のテーマ、すべて引き切りました</h3><p>おつかれさまでした。<br>主催者メニューから、最初にもどせます。</p></div>';
   $('front').querySelector('.bigpaw').style.color='var(--leaf)';
   $('draw').disabled=true;$('pass').disabled=true;
   $('card').classList.add('flip');
 }
+function noneLeft(){
+  $('front').innerHTML='<div class="done">'+PAW.replace('<svg','<svg class="bigpaw"')+
+    '<h3>この条件のテーマを出し切りました</h3><p>主催者メニューの「飼っていない方に配慮」を<br>解除すると、続きを引けます。</p></div>';
+  $('front').querySelector('.bigpaw').style.color='var(--leaf)';
+  $('card').classList.add('flip');
+}
+// 札切れ画面が出ている状態で条件を変えたら、通常のカードに戻す
+function restoreFront(){
+  if(!$('front').querySelector('.done')) return;
+  $('front').innerHTML=frontHTML;
+  if(current!=null) render(current,false);
+  else $('card').classList.remove('flip');
+}
+
 /* ---------- 抽選アニメーション（3〜5秒） ---------- */
 const SPEEDS={slow:5000,std:3800,fast:1500};
 let drawMs=SPEEDS.std, timers=[], endDraw=null;
@@ -584,8 +629,9 @@ function playDraw(n){
 function drawTheme(){
   if(animating) return;
   if(bag.length===0){finish();return;}
-  animating=true;$('draw').disabled=true;$('pass').disabled=true;
   const n=pick();
+  if(n===null){noneLeft();return;}
+  animating=true;$('draw').disabled=true;$('pass').disabled=true;
   const flipped=$('card').classList.contains('flip');
   if(flipped){$('card').classList.remove('flip');later(()=>playDraw(n),300);}
   else{playDraw(n);}
@@ -635,7 +681,7 @@ function openHost(){
 }
 $('numGo').addEventListener('click',()=>{
   const v=parseInt($('numInput').value,10);
-  if(!(v>=1&&v<=100))return;
+  if(!(v>=1&&v<=THEMES.length))return;
   const i=bag.indexOf(v); if(i>=0)bag.splice(i,1);
   render(v);$('card').classList.add('flip');
   $('draw').textContent='次のテーマへ';$('draw').disabled=false;
@@ -646,6 +692,10 @@ $('speedChips').querySelectorAll('.chip').forEach(b=>b.addEventListener('click',
   $('speedChips').querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
   b.classList.add('on');
 }));
+$('swAnyone').addEventListener('click',()=>{
+  anyoneOnly=!anyoneOnly;$('swAnyone').classList.toggle('on',anyoneOnly);
+  restoreFront();
+});
 $('swBig').addEventListener('click',()=>{
   big=!big;document.body.classList.toggle('big',big);$('swBig').classList.toggle('on',big);
 });
@@ -658,6 +708,12 @@ const frontHTML=$('front').innerHTML;
 function closeSheets(){document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('on'));}
 document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',closeSheets));
 document.querySelectorAll('.sheet').forEach(s=>s.addEventListener('click',e=>{if(e.target===s)closeSheets();}));
+
+/* ---------- 総数まわりの初期化 ---------- */
+$('total').textContent=THEMES.length;
+$('numInput').max=THEMES.length;
+$('numInput').placeholder='1〜'+THEMES.length;
+$('anyCount').textContent=THEMES.filter(t=>t.a).length;
 
 /* ---------- 背景の足あと ---------- */
 $('trail').innerHTML=PAW.repeat(4);
